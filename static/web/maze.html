@@ -1,0 +1,229 @@
+<style>
+  canvas {
+    border-style: solid;
+    background-color: black;
+  }
+
+</style>
+
+<html>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Maze</title>
+</head>
+<body>
+  <canvas id="mycanvas" width="610" height="610"></canvas>
+</body>
+</html>
+
+</html>
+
+<script>
+  var canvas = document.getElementById("mycanvas");
+  var ctx = canvas.getContext("2d");
+  // used to store 2-Dimensional array of points
+  var pts = [];
+  // used to store all the paths
+  var paths = [];
+  // array which acts as a stack for the DFS algorithm
+  var ptStack = [];
+  // array which acts as a stack for the BFS algorithm
+  var solveQueue = [];
+  // variable to set the size of the grid
+  var gridSize = 60;
+
+  var start = null;
+  var goal = null;
+
+  initialize();
+  // an interval is used to visualize the BFS algorithm's thinking
+  var solve = setInterval(bfsSolve, 50);
+
+
+  //Constructor for a point object
+  function Point(x, y) {
+    // x and y coordinates for drawing the point on the canvas
+    this.drawX = (x + 1) * 10;
+    this.drawY = (y + 1) * 10;
+    /**
+     * variable to indicate if a point has been visited
+     * this is necessary to ensure that the maze does not
+     * contain any loops, and that every point is traversed
+     */
+    this.dfsVisited = false;
+    this.bfsVisited = false;
+    this.neighbors = [];
+    this.paths = [];
+    // stores the parent in relation to the BFS traversal
+    this.parent = null;
+
+    //draw the point, used to animate the maze drawing
+    this.draw = function () {
+      ctx.beginPath();
+      ctx.fillStyle = "#ff80ff";
+      ctx.fillRect(this.drawX - 4, this.drawY - 4, 8, 8);
+      ctx.closePath();
+    };
+
+    /**
+     * Function to get a random unvisited neighbor
+     * returns false if there are no neighbors
+     */
+    this.getUnvisited = function () {
+      // clear any visited neighbors from the array
+      for (var i = this.neighbors.length - 1; i >= 0; i--) {
+        if (this.neighbors[i].dfsVisited) {
+          this.neighbors.splice(i, 1);
+        }
+      }
+      // select a random unvisited neighbor if there are any
+      if (this.neighbors.length > 0) {
+        var idx = Math.floor(Math.random() * this.neighbors.length);
+        return this.neighbors[idx];
+      } else {
+        return false;
+      }
+    };
+
+  }
+
+  //constructor for a path object, Takes two points as parameters
+  function Path(p1, p2, color) {
+    this.p1 = p1;
+    this.p2 = p2;
+    // determines if the path is horizontal or vertical
+    this.vertical = p1.drawX == p2.drawX;
+    this.color = color;
+    this.draw = function () {
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      if (this.vertical) {
+        // this code makes the corners look nice :)
+        ctx.moveTo(p1.drawX, Math.min(p1.drawY, p2.drawY) - 2);
+        ctx.lineTo(p2.drawX, Math.max(p1.drawY, p2.drawY) + 2);
+      } else {
+        ctx.moveTo(p1.drawX, p1.drawY);
+        ctx.lineTo(p2.drawX, p2.drawY);
+      }
+      ctx.stroke();
+      ctx.closePath();
+    }
+  }
+
+  // create all points, the maze, and initialize the queue for the BFS traversal
+  function initialize() {
+    //create the points
+    for (var i = 0; i < gridSize; i++) {
+      var row = [];
+      for (var j = 0; j < gridSize; j++) {
+        row.push(new Point(i, j));
+        if (i > 0) {
+          /**
+           * If there is a point above the current point
+           * this adds that point to the current point's
+           * neighbors list and adds the current point to
+           * the vertical neighbor's neighbors list.
+           */
+          pts[i - 1][j].neighbors.push(row[j]);
+          row[j].neighbors.push(pts[i - 1][j]);
+        }
+        if (j > 0) {
+          /**
+           * If there is a point to the right of the 
+           * current point this adds that point to the 
+           * current point's neighbors list and adds 
+           * the current point to the vertical neighbor's 
+           * neighbors list.
+           */
+          row[j - 1].neighbors.push(row[j]);
+          row[j].neighbors.push(row[j - 1]);
+        }
+      }
+      pts.push(row);
+    }
+    //pick a random point to start the stack and mark it as visited
+    start = pickRandomPoint();
+    ptStack.push(start);
+    ptStack[0].dfsVisited = true;
+    createMaze();
+    drawMaze();
+    // pick random points for the start and end of the maze
+    start = pickRandomPoint();
+    start.bfsVisited = true;
+    solveQueue.push(start);
+    goal = pickRandomPoint();
+  }
+
+  // Function to pick a random point in the maze
+  function pickRandomPoint() {
+    var x = Math.floor(Math.random() * gridSize);
+    var y = Math.floor(Math.random() * gridSize);
+    return pts[x][y];
+  }
+
+  function drawMaze() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < paths.length; i++) {
+      paths[i].draw();
+    }
+
+  }
+
+  function createMaze() {
+    while (true) {
+      var nb = ptStack[0].getUnvisited();
+      while (nb == false) {
+        // 'pop' the first item off the stack
+        ptStack.splice(0, 1);
+        if (ptStack.length == 0) {
+          return;
+        }
+        nb = ptStack[0].getUnvisited();
+      }
+      nb.dfsVisited = true;
+      paths.push(new Path(ptStack[0], nb, "white"));
+      ptStack[0].paths.push(nb);
+      nb.paths.push(ptStack[0]);
+      // 'push' an item onto the stack
+      ptStack.splice(0, 0, nb);
+    }
+
+  }
+
+  function bfsSolve() {
+    drawMaze();
+    goal.draw();
+    start.draw();
+    var pt = solveQueue.pop();
+    if (pt == goal) {
+      clearInterval(solve);
+      drawSolution();
+      return;
+    }
+    pt.bfsVisited = true;
+    for (var i = 0; i < pt.paths.length; i++) {
+      if (!pt.paths[i].bfsVisited) {
+        pt.paths[i].parent = pt;
+        solveQueue.splice(0, 0, pt.paths[i]);
+        paths.push(new Path(pt, pt.paths[i], "blue"));
+      }
+    }
+  }
+
+  function drawSolution() {
+    while (paths[paths.length - 1].color === "blue") {
+      paths.pop();
+    }
+    var pt = goal;
+    while (pt.parent != null) {
+      paths.push(new Path(pt, pt.parent, "red"));
+      pt = pt.parent;
+    }
+    drawMaze();
+    goal.draw();
+    start.draw();
+  }
+
+</script>

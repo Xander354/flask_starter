@@ -1,0 +1,25 @@
+{% extends "index.html" %}
+
+{%block content%}
+<link rel="stylesheet" href="/static/collapsible.css" />
+<div class="gameContent">
+  <h1>{{name}}</h1>
+  <p>{{desc}}</p>
+  <iframe src="{{vid}}"></iframe>
+  <h1>Code Snippets and Data Samples</h1>
+  {% for snippet in snippets %}
+  <div class="snippetContent">
+    <button type="button" class="collapsible">{{snippet[0]}}</button>
+    <div class="content">
+      <p>{{snippet[2]}}</p>
+      {% if snippet[1]|length > 40 %}
+      <pre><code class="c++">{{snippet[1].replace('\/', '/').replace('\t', '  ')}}</code></pre>
+      {% else %}
+      <img src="/static/images/{{snippet[1]}}" />
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<script src="/static/game.js"></script>
+  {%endblock%}

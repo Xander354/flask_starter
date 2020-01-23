@@ -1,0 +1,1 @@
+$(".gameContent > pre").width(this.scrollWidth);

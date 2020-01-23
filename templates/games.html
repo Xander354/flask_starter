@@ -1,0 +1,11 @@
+{% extends "index.html" %}
+
+{%block content%}
+{% for game in projects %}
+  <div class="gamedisplay" onclick="window.location.href = '/games/{{game.name}}'">
+    <h1>{{game.name}}</h1>
+    <img height="400" src="/static/images/{{game.image}}" />
+  </div>
+{% endfor %}
+
+{%endblock%}
